@@ -1,4 +1,4 @@
-# DogBot
+# DogBot - ![discord](https://img.shields.io/discord/1285438304518406174?label=discord&logo=discord)
 Discord Dog Bot Source Code
 
 ## Prerequisites
