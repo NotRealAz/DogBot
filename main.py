@@ -209,6 +209,10 @@ async def inventory_command(interaction: discord.Interaction):
     This command shows all of the dogs that a user has caught (doesnt share across servers).
     If the user has no dogs, it will say so in the embed.
     """
+    
+    if isinstance(interaction.channel, discord.DMChannel):
+        await interaction.response.send_message("This command cannot be used in DMs.", ephemeral=True)
+        return
 
     await interaction.response.defer()
     user_id = interaction.user.id
