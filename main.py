@@ -326,7 +326,12 @@ async def help_command(interaction: discord.Interaction):
         text="Dog Bot by notrealaz, Dog stand by meo",
         icon_url="https://github.com/NotRealAz/DogBot/blob/main/media/dogs/mutt.png?raw=true"
     )
-    
+
+    try:
+        await interaction.response.send_message(embeds=[embed1, embed2])
+    except discord.errors.NotFound:
+        await interaction.response.send_message("Failed to send the help message.", ephemeral=True)
+        
 @bot.tree.command(name="setup_catching", description="Set up configuration for catching (slow and normal).")
 async def setup_catching_command(interaction: discord.Interaction, catching_channel: discord.TextChannel, slow_catching_channel: discord.TextChannel):
     """
