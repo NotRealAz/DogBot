@@ -304,8 +304,8 @@ async def help_command(interaction: discord.Interaction):
     embed2.add_field(
         name="Catching Dogs",
         value=("From time to time, dogs will spawn.\n\n"
-               "To catch them, you must say `dog`. If you can't catch the dog, "
-               "then it's glitched and doesn't count. The dog will be added to your inventory."),
+               "To catch them, you must say `dog`. (If you can't catch the dog, "
+               "then it's glitched and doesn't count). Then the dog will be added to your inventory."),
         inline=True
     )
     
@@ -331,7 +331,7 @@ async def help_command(interaction: discord.Interaction):
         await interaction.response.send_message(embeds=[embed1, embed2])
     except discord.errors.NotFound:
         await interaction.response.send_message("Failed to send the help message.", ephemeral=True)
-        
+
 @bot.tree.command(name="setup_catching", description="Set up configuration for catching (slow and normal).")
 async def setup_catching_command(interaction: discord.Interaction, catching_channel: discord.TextChannel, slow_catching_channel: discord.TextChannel):
     """
