@@ -68,7 +68,7 @@ class DB:
             cursor = self.conn.execute(
                 """INSERT INTO server_config (catching_channel_id, slow_catching_channel_id, guild_id)
                    VALUES (?, ?, ?)
-                   ON CONFLICT(guild_id) 
+                   ON CONFLICT(catching_channel_id, slow_catching_channel_id, guild_id) 
                    DO UPDATE SET catching_channel_id = ?, slow_catching_channel_id = ?""",
                 (catching_channel_id, slow_catching_channel_id, guild_id, catching_channel_id, slow_catching_channel_id)
             )

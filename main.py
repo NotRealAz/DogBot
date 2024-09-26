@@ -49,7 +49,7 @@ async def on_ready():
         activity=discord.Activity(type=discord.ActivityType.playing, name=f"in {len(bot.guilds):,} servers!")
     )
     print(f"Logged in as {bot.user.name}")
-    send_dog_message.start()  # Start the background task
+    send_dog_message.start()
     await bot.tree.sync()  # Sync commands with Discord
 
 def get_random_dog() -> dict:
@@ -64,7 +64,7 @@ def get_random_dog() -> dict:
             return dog
         upto += dog["chance"]
 
-@tasks.loop(minutes=random.randint(1, 5))
+@tasks.loop(minutes=random.randint(5, 10))
 async def send_dog_message():
 
     """Periodically sends a message to spawn a random dog in configured channels."""
@@ -212,7 +212,7 @@ async def inventory_command(interaction: discord.Interaction):
 
     await interaction.response.defer()
     user_id = interaction.user.id
-    guild_id = interaction.guild.id  # Ensure you're using the guild ID
+    guild_id = interaction.guild.id 
 
     dogs = db.list_dogs(user_id, guild_id)
 
@@ -226,6 +226,106 @@ async def inventory_command(interaction: discord.Interaction):
         embed.description = "You don't have any dogs in your inventory."
 
     await interaction.followup.send(embed=embed)
+
+# info commmand. shows info about dogbot
+@bot.tree.command(name="info", description="Shows info about dogbot.")
+async def info_command(interaction: discord.Interaction):
+    
+    """Shows info about dogbot."""
+    
+    embed = discord.Embed(
+        title="DogBot",
+        description=("[Discord Server](https://discord.gg/7yv7DEz9a5)\n"
+                     "[Github Page](https://github.com/NotRealAz/DogBot)\n\n"
+                     "Dog bot adds Dog hunting, silly commands, and more fun features!\n\n"
+                     "List of features:"),
+        color=discord.Color(0xFFA500)
+    )
+    
+    # Add fields
+    embed.add_field(
+        name="Dog Hunting",
+        value=("Many Dog Types such as mutt, husky, dalmatian, and more!\n"
+               "To catch them, type 'dog' when it spawns in a catching channel."),
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Commands",
+        value="Silly Little Commands For Fun!",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="DogBoard (DogStand exclusive)",
+        value=("Messages with 5 <:staring_dog:1285440635117113344> reactions "
+               "would appear in the dog board to see all of the horrendous or funny stuff people say."),
+        inline=True
+    )
+    
+    # Set footer and thumbnail
+    embed.set_footer(
+        text="Dog Bot by notrealaz, Dog stand by meo",
+        icon_url="https://github.com/NotRealAz/DogBot/blob/main/media/dogs/mutt.png?raw=true"
+    )
+    
+    embed.set_thumbnail(
+        url="https://github.com/NotRealAz/DogBot/blob/main/media/dogs/mutt.png?raw=true"
+    )
+    
+    try:
+        await interaction.response.send_message(embed=embed)
+    except discord.errors.NotFound:
+        await interaction.response.send_message("Failed to send the help message.", ephemeral=True)
+
+# help commmand. shows how to use dogbot
+@bot.tree.command(name="help", description="Shows how to use dogbot.")
+async def help_command(interaction: discord.Interaction):
+    
+    """Shows how to use dogbot."""
+    
+    embed1 = discord.Embed(
+        title="How to Setup",
+        description=("To set up catching, you need to use the `/setup_catching` command and specify 2 channels: "
+                     "one for `catching` and one for `slow catching`. "
+                     "(You need to be an admin or the owner to run this command), "
+                     "dogs will start spawning every 5/10 minutes."),
+        color=discord.Color(0xFFA500) 
+    )
+
+    embed1.set_thumbnail(url="https://raw.githubusercontent.com/NotRealAz/DogBot/refs/heads/main/media/dogs/mutt.png")
+    
+    # Second Embed: "How to Play"
+    embed2 = discord.Embed(
+        title="How to Play",
+        color=discord.Color(0xFFA500)
+    )
+
+    embed2.add_field(
+        name="Catching Dogs",
+        value=("From time to time, dogs will spawn.\n\n"
+               "To catch them, you must say `dog`. If you can't catch the dog, "
+               "then it's glitched and doesn't count. The dog will be added to your inventory."),
+        inline=True
+    )
+    
+    embed2.add_field(
+        name="Viewing Your Inventory",
+        value=("You can view your inventory using the `/inventory` command. "
+               "It will display all the dogs you own, including the amount and type."),
+        inline=True
+    )
+    
+    embed2.add_field(
+        name="Silly Commands",
+        value="Little silly commands to make Dog Bot more fun.",
+        inline=True
+    )
+    
+    embed2.set_footer(
+        text="Dog Bot by notrealaz, Dog stand by meo",
+        icon_url="https://github.com/NotRealAz/DogBot/blob/main/media/dogs/mutt.png?raw=true"
+    )
     
 @bot.tree.command(name="setup_catching", description="Set up configuration for catching (slow and normal).")
 async def setup_catching_command(interaction: discord.Interaction, catching_channel: discord.TextChannel, slow_catching_channel: discord.TextChannel):
@@ -242,8 +342,7 @@ async def setup_catching_command(interaction: discord.Interaction, catching_chan
     if not interaction.user.guild_permissions.administrator and interaction.user.id != interaction.guild.owner.id:
         await interaction.response.send_message("You don't have permission to run this command.", ephemeral=True)
         return
-    
-    # Update the server configuration in the database
+
     db.update_server_config(catching_channel.id, slow_catching_channel.id, interaction.guild.id)
 
     if not send_dog_message.is_running():
