@@ -269,7 +269,7 @@ async def info_command(interaction: discord.Interaction):
     
     # Set footer and thumbnail
     embed.set_footer(
-        text="Dog Bot by notrealaz, Dog stand by meo",
+        text="Dog Bot by notrealaz, Dog stand by meo.isnt.mayo",
         icon_url="https://github.com/NotRealAz/DogBot/blob/main/media/dogs/mutt.png?raw=true"
     )
     
@@ -327,7 +327,7 @@ async def help_command(interaction: discord.Interaction):
     )
     
     embed2.set_footer(
-        text="Dog Bot by notrealaz, Dog stand by meo",
+        text="Dog Bot by notrealaz, Dog stand by meo.isnt.mayo",
         icon_url="https://github.com/NotRealAz/DogBot/blob/main/media/dogs/mutt.png?raw=true"
     )
 
