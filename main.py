@@ -359,6 +359,59 @@ async def setup_catching_command(interaction: discord.Interaction, catching_chan
     
     await interaction.response.send_message(f"Catching channels have been configured for this server!", ephemeral=True)
 
+@bot.tree.command(name="battle", description="Challenge another user to a dog battle!")
+async def battle_command(interaction: discord.Interaction, opponent: discord.User, dog_name: str):
+    """
+    Challenge another user to a dog battle using a selected dog from your inventory.
+
+    Args:
+        interaction: The interaction object.
+        opponent: The user to challenge.
+        dog_name: The name of the dog selected for the battle.
+    """
+    if opponent == interaction.user:
+        await interaction.response.send_message("You can't challenge yourself!", ephemeral=True)
+        return
+
+    user_id = interaction.user.id
+    guild_id = interaction.guild.id 
+
+    # Check user's inventory for the selected dog
+    dogs = db.list_dogs(user_id, guild_id)
+    user_dog = next((dog for dog in dogs if dog[0] == dog_name), None)
+
+    if user_dog is None:
+        await interaction.response.send_message(f"You don't have a dog named '{dog_name}' in your inventory.", ephemeral=True)
+        return
+
+    # Notify opponent and ask them to select their dog
+    embed = discord.Embed(title="Dog Battle Challenge!",
+                          description=f"{interaction.user.name} challenges {opponent.name} to a battle with {dog_name}!",
+                          color=discord.Color.green())
+    await interaction.channel.send(embed=embed)
+
+    def check(msg):
+        return msg.author == opponent and msg.channel == interaction.channel
+
+    await interaction.channel.send(f"{opponent.mention}, please respond with the name of the dog you choose to battle with!")
+
+    try:
+        msg = await bot.wait_for('message', check=check, timeout=30)
+    except asyncio.TimeoutError:
+        await interaction.channel.send(f"{opponent.name} took too long to respond!")
+        return
+
+    opponent_dog_name = msg.content
+    opponent_dog = next((dog for dog in db.list_dogs(opponent.id, guild_id) if dog[0] == opponent_dog_name), None)
+
+    if opponent_dog is None:
+        await interaction.channel.send(f"{opponent.name} doesn't have a dog named '{opponent_dog_name}'.")
+        return
+
+    # Battle logic: For simplicity, we can randomly decide the winner or based on dog stats.
+    winner = random.choice([interaction.user, opponent])
+    await interaction.channel.send(f"The winner is {winner.name} with their dog!")
+
 token = os.getenv("BOT_TOKEN")
 if not token:
     raise EnvironmentError("BOT_TOKEN is not set in the environment.")
