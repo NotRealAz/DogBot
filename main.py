@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands, tasks
 import os
@@ -361,14 +362,15 @@ async def setup_catching_command(interaction: discord.Interaction, catching_chan
 
 @bot.tree.command(name="battle", description="Battle dogs with another member!")
 async def battle_command(interaction: discord.Interaction, opponent: discord.User, dog_name: str):
+    
     """
     Challenge another user to a dog battle using a selected dog from your inventory.
-
     Args:
         interaction: The interaction object.
         opponent: The user to challenge.
         dog_name: The name of the dog selected for the battle.
     """
+
     if opponent == interaction.user:
         await interaction.response.send_message("Why would you want to fight yourself?", ephemeral=True)
         return
@@ -381,34 +383,51 @@ async def battle_command(interaction: discord.Interaction, opponent: discord.Use
     user_dog = next((dog for dog in dogs if dog[0] == dog_name), None)
 
     if user_dog is None:
-        await interaction.response.send_message(f"There is no such this as a '{dog_name}' in your inventory.", ephemeral=True)
+        await interaction.response.send_message(f"There is no such thing as a '{dog_name}' in your inventory.", ephemeral=True)
         return
 
     # Notify opponent and ask them to select their dog
-    embed = discord.Embed(title="Dog Battle Challenge!",
-                          description=f"{interaction.user.name} challenges {opponent.name} to a battle with {dog_name}!",
-                          color=discord.Color.green())
+    embed = discord.Embed(
+        title="Dog Battle Challenge!",
+        description=f"{interaction.user.name} challenges {opponent.name} to a battle with {dog_name}!",
+        color=discord.Color.green()
+    )
     await interaction.channel.send(embed=embed)
 
     def check(msg):
         return msg.author == opponent and msg.channel == interaction.channel
 
-    await interaction.channel.send(f"{opponent.mention}, Which dog would you like to battle?")
+    await interaction.channel.send(f"{opponent.mention}, which dog would you like to battle with?")
 
-    try:
-        msg = await bot.wait_for('message', check=check, timeout=60)
-    except asyncio.TimeoutError:
-        await interaction.channel.send(f"{opponent.name} took too long to respond.")
+    # Retry logic for opponent to choose their dog
+    attempts = 0
+    max_attempts = 3
+    timeout_duration = 300  # 5 minutes
+
+    while attempts < max_attempts:
+        try:
+            msg = await bot.wait_for('message', check=check, timeout=timeout_duration)
+            opponent_dog_name = msg.content
+
+            # Check if the opponent owns the dog they specified
+            opponent_dogs = db.list_dogs(opponent.id, guild_id)
+            opponent_dog = next((dog for dog in opponent_dogs if dog[0] == opponent_dog_name), None)
+
+            if opponent_dog is not None:
+                break
+            else:
+                await interaction.channel.send(f"{opponent.name}, you don't own a dog named '{opponent_dog_name}'. Please choose again.")
+                attempts += 1
+
+        except asyncio.TimeoutError:
+            await interaction.channel.send(f"{opponent.name} took too long to respond. The battle has been canceled.")
+            return
+
+    if attempts == max_attempts:
+        await interaction.channel.send(f"{opponent.name} failed to choose a valid dog in {max_attempts} attempts. The battle has been canceled.")
         return
 
-    opponent_dog_name = msg.content
-    opponent_dog = next((dog for dog in db.list_dogs(opponent.id, guild_id) if dog[0] == opponent_dog_name), None)
-
-    if opponent_dog is None:
-        await interaction.channel.send(f"{opponent.name} doesn't have a dog named '{opponent_dog_name}'.")
-        return
-
-    # Battle logic: For simplicity, we can randomly decide the winner or based on dog stats.
+    # Battle logic: Randomly decide the winner or based on dog stats.
     winner = random.choice([interaction.user, opponent])
     await interaction.channel.send(f"Winner: {winner.name}!")
 
