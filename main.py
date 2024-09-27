@@ -122,7 +122,7 @@ async def on_message(message):
     current_dog = guild_state["current_dog"]
     dog_message = guild_state["dog_message"]
 
-    if message.content == 'dog' and current_dog is not None:
+    if message.content.lower() == 'dog' and current_dog is not None:
         if message.channel.id == dog_message.channel.id:
             spawn_time = dog_message.created_at.timestamp()
             catch_time = time.time()
