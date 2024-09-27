@@ -360,6 +360,54 @@ async def setup_catching_command(interaction: discord.Interaction, catching_chan
     
     await interaction.response.send_message(f"Catching channels have been configured for this server!", ephemeral=True)
 
+@bot.tree.command(name="forcespawn", description="Forces a dog to spawn.")
+@commands.has_permissions(manage_guild=True)
+async def forcespawn_command(interaction: discord.Interaction, dogname: str):
+
+    """Force spawns a specific dog."""
+
+    # Find the dog with the given name
+    current_dog = next((dog for dog in dogs if dog["name"].lower() == dogname.lower()), None)
+    if current_dog is None:
+        await interaction.response.send_message(f"{dogname} doesn't exist in the database.", ephemeral=True)
+        return
+
+    config = db.list_server_config(interaction.guild.id)
+    if config is None:
+        await interaction.response.send_message("Configuration error for this server.", ephemeral=True)
+        return
+
+    CATCHING_CHANNEL_ID, SLOW_CATCHING_CHANNEL_ID = config
+    dog_spawn_channel = bot.get_channel(random.choice([SLOW_CATCHING_CHANNEL_ID, CATCHING_CHANNEL_ID]))
+    if dog_spawn_channel is None:
+        await interaction.response.send_message("Couldn't find a valid channel to spawn the dog.", ephemeral=True)
+        return
+
+    # Make sure no dog is currently spawned
+    guild_state = guild_dog_states.get(interaction.guild.id, {"current_dog": None, "dog_message": None})
+    if guild_state["current_dog"] is not None:
+        await interaction.response.send_message("A dog is already spawned!", ephemeral=True)
+        return
+
+    # Set the spawn type to "forcespawn" and send the dog message
+    if os.path.exists(current_dog['image']):
+        file = discord.File(current_dog['image'], filename=os.path.basename(current_dog['image']))
+        dog_message = await dog_spawn_channel.send(
+            f"A {current_dog['emoji']} {current_dog['name']} has forcefully spawned! Type 'dog' to catch it!",
+            file=file
+        )
+
+        # Update the guild state with the forced dog spawn info
+        guild_dog_states[interaction.guild.id] = {
+            "current_dog": current_dog,
+            "dog_message": dog_message,
+            "dog_spawn_channel": dog_spawn_channel
+        }
+
+        await interaction.response.send_message(f"{current_dog['name']} has been forcefully spawned in {dog_spawn_channel.mention}!")
+    else:
+        await interaction.response.send_message(f"Error: File {current_dog['image']} not found!", ephemeral=True)
+
 @bot.tree.command(name="battle", description="Battle dogs with another member!")
 async def battle_command(interaction: discord.Interaction, opponent: discord.User, dog_name: str):
     
@@ -392,6 +440,7 @@ async def battle_command(interaction: discord.Interaction, opponent: discord.Use
         description=f"{interaction.user.name} challenges {opponent.name} to a battle with {dog_name}!",
         color=discord.Color.green()
     )
+    await interaction.response.send_message("Battle Started.", ephemeral=True)
     await interaction.channel.send(embed=embed)
 
     def check(msg):
