@@ -50,7 +50,10 @@ async def on_ready():
         activity=discord.Activity(type=discord.ActivityType.playing, name=f"in {len(bot.guilds):,} servers!")
     )
     print(f"Logged in as {bot.user.name}")
-    send_dog_message.start()
+
+    if not send_dog_message.is_running():
+        send_dog_message.start()
+        
     await bot.tree.sync()  # Sync commands with Discord
 
 def get_random_dog() -> dict:
