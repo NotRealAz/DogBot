@@ -53,7 +53,7 @@ async def on_ready():
 
     if not send_dog_message.is_running():
         send_dog_message.start()
-        
+
     await bot.tree.sync()  # Sync commands with Discord
 
 def get_random_dog() -> dict:
@@ -205,35 +205,43 @@ async def dog_fact_command(interaction: discord.Interaction):
                 await interaction.followup.send("Failed to fetch a dog fact.")
 
 @bot.tree.command(name="inventory", description="See all of your dawgs")
-async def inventory_command(interaction: discord.Interaction):
-
+async def inventory_command(interaction: discord.Interaction, member: discord.Member = None):
+    
     """
     Shows all of the dogs in a user's inventory.
 
-    This command shows all of the dogs that a user has caught (doesnt share across servers).
+    This command shows all of the dogs that a user has caught (doesn't share across servers).
     If the user has no dogs, it will say so in the embed.
     """
-    
+
     if isinstance(interaction.channel, discord.DMChannel):
         await interaction.response.send_message("This command cannot be used in DMs.", ephemeral=True)
         return
 
-    await interaction.response.defer()
-    user_id = interaction.user.id
+    user_id = member.id if member else interaction.user.id
     guild_id = interaction.guild.id 
 
+    # Fetch dogs from the database
     dogs = db.list_dogs(user_id, guild_id)
 
+    # Prepare the embed
     embed = discord.Embed(title="Dogs", description="Here are all your dogs:", color=discord.Color.blue())
-    embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar.url)
+    display_member = member or interaction.user  # Choose the member to display
+    embed.set_author(name=display_member.display_name, icon_url=display_member.avatar.url)
 
+    # Handle the list of dogs
     if dogs:
         for dog in dogs:
-            embed.add_field(name=dog[0], value=dog[1], inline=False)
+            embed.add_field(name=dog[0], value=dog[1], inline=True)
     else:
-        embed.description = "You don't have any dogs in your inventory."
+        # Set the appropriate message if there are no dogs
+        no_dogs_msg = f"{display_member.display_name} doesn't have any dogs in their inventory." if member else "You don't have any dogs in your inventory."
+        embed.description = no_dogs_msg
 
-    await interaction.followup.send(embed=embed)
+    try:
+        await interaction.response.send_message(embed=embed)
+    except discord.errors.NotFound:
+        await interaction.followup.send("Unknown interaction.", ephemeral=True)
 
 # info commmand. shows info about dogbot
 @bot.tree.command(name="info", description="Shows info about dogbot.")
