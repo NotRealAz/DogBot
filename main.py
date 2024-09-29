@@ -206,7 +206,7 @@ async def dog_fact_command(interaction: discord.Interaction):
 
 @bot.tree.command(name="inventory", description="See all of your dawgs")
 async def inventory_command(interaction: discord.Interaction, member: discord.Member = None):
-    
+
     """
     Shows all of the dogs in a user's inventory.
 
