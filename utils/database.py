@@ -58,6 +58,42 @@ class DB:
             )
             result = cursor.fetchall()
             return result if result else []  # Return an empty list if no dogs found
+        
+    def get_leaderboard(self, guild_id):
+        """
+        
+        Returns the leaderboard for a specific guild.
+        Returns the rarest dog and the top 15 users with the most dogs.
+
+        [ Rarest dog in the database (guild based) ]
+        
+        [ amount dogs: User_ID ]
+
+        """
+        with self.conn:
+            cursor = self.conn.execute(
+                """SELECT type, SUM(amount) as total_amount 
+                FROM dogs 
+                WHERE guild_id = ? 
+                GROUP BY type 
+                ORDER BY total_amount ASC 
+                LIMIT 1""",
+                (guild_id,)
+            )
+            rarest_dog = cursor.fetchone()  # ('dog_type', total_amount)
+
+            cursor = self.conn.execute(
+                """SELECT user_id, SUM(amount) as total_amount 
+                FROM dogs 
+                WHERE guild_id = ? 
+                GROUP BY user_id 
+                ORDER BY total_amount DESC 
+                LIMIT 15""",
+                (guild_id,)
+            )
+            top_users = cursor.fetchall()
+            
+        return rarest_dog, top_users
 
     def update_server_config(self, catching_channel_id, slow_catching_channel_id, guild_id):
         """

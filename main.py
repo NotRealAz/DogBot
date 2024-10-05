@@ -1,4 +1,5 @@
 import asyncio
+from typing import List, Tuple
 import discord
 from discord.ext import commands, tasks
 import os
@@ -242,6 +243,33 @@ async def inventory_command(interaction: discord.Interaction, member: discord.Me
         await interaction.response.send_message(embed=embed)
     except discord.errors.NotFound:
         await interaction.followup.send("Unknown interaction.", ephemeral=True)
+        
+@bot.tree.command(name="leaderboard", description="Shows the leaderboard")
+async def get_leaderboard(interaction: discord.Interaction):
+    guild_id = interaction.guild.id  # Get guild ID from the interaction
+    rarest_dog, top_users = db.get_leaderboard(guild_id)  # Call the db method
+
+    # Create the embed for leaderboard
+    embed = discord.Embed(
+        title=f"Dogs Leaderboard",
+        description=f"Rarest dog: {rarest_dog[0]} ({rarest_dog[1]} exist)" if rarest_dog else "No data available.",
+        color=discord.Color.blue()  # Set the color of the embed
+    )
+
+    # Add each top user as a separate field (with rank number)
+    if top_users:
+        for index, (user_id, total_amount) in enumerate(top_users):
+            embed.add_field(
+                name="",  # Rank number (1, 2, 3...)
+                value=f"{index+1}.  {total_amount:,} dogs: <@{user_id}>",  # User's dog count and mention
+                inline=False  # Ensure each field is not inlined
+            )
+    else:
+        embed.add_field(name="No users found", value="No data available.", inline=False)
+
+    # Send the embed as a response to the interaction
+    await interaction.response.send_message(embed=embed)
+
 
 # info commmand. shows info about dogbot
 @bot.tree.command(name="info", description="Shows info about dogbot.")
