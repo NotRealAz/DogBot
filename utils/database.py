@@ -47,6 +47,25 @@ class DB:
             )
             return cursor.rowcount  # Return the number of affected rows
 
+    def remove_dog(self, type, user_id, guild_id, amount=1):
+        """
+        Removes a dog from the user's inventory.
+        """
+        with self.conn:
+            # Update the amount of dogs, but only where amount > 0
+            cursor = self.conn.execute(
+                "UPDATE dogs SET amount = amount - ? WHERE type = ? AND user_id = ? AND guild_id = ? AND amount > 0",
+                (amount, type, user_id, guild_id)
+            )
+            
+            # Delete any rows where amount is now 0 after the update
+            self.conn.execute(
+                "DELETE FROM dogs WHERE type = ? AND user_id = ? AND guild_id = ? AND amount = 0",
+                (type, user_id, guild_id)
+            )
+
+            return cursor.rowcount
+        
     def list_dogs(self, user_id, guild_id):
         """
         Returns all dogs for a user in a guild.

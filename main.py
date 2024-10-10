@@ -243,7 +243,40 @@ async def inventory_command(interaction: discord.Interaction, member: discord.Me
         await interaction.response.send_message(embed=embed)
     except discord.errors.NotFound:
         await interaction.followup.send("Unknown interaction.", ephemeral=True)
-        
+
+@bot.tree.command(name="force_remove", description="remove dogs from someones inventory")
+async def force_remove(interaction: discord.Interaction, member: discord.Member, dog: str, amount: int):
+
+    """
+    Removes dogs from a user's inventory.
+
+    Args:
+        member: The user to remove dogs from.
+        dog: The type of the dog to remove.
+        amount: The amount of dogs to remove.
+    """
+
+    if not interaction.user.guild_permissions.moderate_members:
+        await interaction.response.send_message("You need to be a moderator to use this command.", ephemeral=True)
+        return
+
+    if isinstance(interaction.channel, discord.DMChannel):
+        await interaction.response.send_message("This command cannot be used in DMs.", ephemeral=True)
+        return
+
+    user_id = member.id
+    guild_id = interaction.guild.id
+    
+    # Check if the user has enough dogs to remove
+    dogs = db.list_dogs(user_id, guild_id)
+    if len(dogs) < amount:
+        await interaction.response.send_message("You don't have that many dogs in your inventory.", ephemeral=True)
+        return
+
+    # Remove the dogs
+    db.remove_dog(dog, user_id, guild_id, amount)
+    await interaction.response.send_message(f"Removed {amount} {dog} from {member.display_name}'s inventory.", ephemeral=True)
+
 @bot.tree.command(name="leaderboard", description="Shows the leaderboard")
 async def get_leaderboard(interaction: discord.Interaction):
     guild_id = interaction.guild.id  # Get guild ID from the interaction
@@ -399,11 +432,14 @@ async def setup_catching_command(interaction: discord.Interaction, catching_chan
     
     await interaction.response.send_message(f"Catching channels have been configured for this server!", ephemeral=True)
 
-@bot.tree.command(name="forcespawn", description="Forces a dog to spawn.")
-@commands.has_permissions(manage_guild=True)
+@bot.tree.command(name="forcespawn", description="forces a dog to spawn.")
 async def forcespawn_command(interaction: discord.Interaction, dogname: str):
 
     """Force spawns a specific dog."""
+
+    if not interaction.user.guild_permissions.moderate_members or interaction.user.id != interaction.guild.owner_id:
+        await interaction.response.send_message("You don't have permission to run this command.", ephemeral=True)
+        return
 
     # Find the dog with the given name
     current_dog = next((dog for dog in dogs if dog["name"].lower() == dogname.lower()), None)
