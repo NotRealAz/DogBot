@@ -32,7 +32,7 @@ class DB:
                 PRIMARY KEY (catching_channel_id, slow_catching_channel_id, guild_id)
             );''')
 
-    def catch_dog(self, type, user_id, guild_id, amount=1):
+    def add_dog(self, type, user_id, guild_id, amount=1):
         """
         Adds a dog to the user's inventory or updates the amount if the dog already exists.
         Uses ON CONFLICT to avoid separate INSERT and UPDATE queries.
@@ -140,6 +140,13 @@ class DB:
             )
             result = cursor.fetchone()
             return result if result else None  # Return None if no config found
+        
+    def clear_server_config(self, guild_id):
+        """
+        Clears the server's configuration for a guild.
+        """
+        with self.conn:
+            self.conn.execute("DELETE FROM server_config WHERE guild_id = ?", (guild_id,))
 
     def __enter__(self):
         """

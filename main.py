@@ -135,7 +135,7 @@ async def on_message(message):
 
             await dog_message.delete()
 
-            db.catch_dog(current_dog['name'], message.author.id, message.guild.id, 1)
+            db.add_dog(current_dog['name'], message.author.id, message.guild.id, 1)
 
             dogs = db.list_dogs(message.author.id, message.guild.id)
             amount = next((dog[1] for dog in dogs if dog[0] == current_dog['name']), 0)
@@ -425,12 +425,16 @@ async def setup_catching_command(interaction: discord.Interaction, catching_chan
         await interaction.response.send_message("You don't have permission to run this command.", ephemeral=True)
         return
 
-    db.update_server_config(catching_channel.id, slow_catching_channel.id, interaction.guild.id)
-
+    if db.list_server_config(interaction.guild.id) is None:
+        db.update_server_config(catching_channel.id, slow_catching_channel.id, interaction.guild.id)
+    else:
+        db.clear_server_config(interaction.guild.id)
+        db.update_server_config(catching_channel.id, slow_catching_channel.id, interaction.guild.id)
+    
     if not send_dog_message.is_running():
         await send_dog_message.start()
     
-    await interaction.response.send_message(f"Catching channels have been configured for this server!", ephemeral=True)
+    await interaction.response.send_message(f"Catching channels have been configured for this server! {catching_channel.mention} and {slow_catching_channel.mention}", ephemeral=True)
 
 @bot.tree.command(name="forcespawn", description="forces a dog to spawn.")
 async def forcespawn_command(interaction: discord.Interaction, dogname: str):
