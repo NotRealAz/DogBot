@@ -2,12 +2,16 @@
     "dogs": [
         {"name": "mutt", "chance": 30, "image": "media/dogs/mutt.png", "emoji": "<:mutt_dog:1287525184797937725>"},
         {"name": "chihuahua", "chance": 30, "image": "media/dogs/chiwawa.png", "emoji": "<:chihuahua_dog:1287525103025782848>"},
-        {"name": "husky", "chance": 15, "image": "media/dogs/husky.png", "emoji": "<:husky_dog:1287525288066158664>"},
-        {"name": "shiba inu", "chance": 20, "image": "media/dogs/shiba.png", "emoji": "<:shibainu_dog:1287528121561645067>"},
-        {"name": "shih tzu", "chance": 25, "image": "media/dogs/sitzu.png", "emoji": "<:shihtzu_dog:1287529708824821852>"},
         {"name": "dalmatian", "chance": 25, "image": "media/dogs/dalmatian.png", "emoji": "<:dalmatian_dog:1287525224580911114>"},
+        {"name": "german shepherd", "chance": 20, "image": "media/dogs/germanshepherd.png", "emoji": "<:germanshepherd_dog:1315075483473543248>"},
+        {"name": "aussie shepherd", "chance": 17, "image": "media/dogs/aussieshepherd.png", "emoji": "<:aussieshepherd_dog:1315075726717747230>"},
+        {"name": "shiba inu", "chance": 15, "image": "media/dogs/shiba.png", "emoji": "<:shibainu_dog:1287528121561645067>"},
+        {"name": "husky", "chance": 10, "image": "media/dogs/husky.png", "emoji": "<:husky_dog:1287525288066158664>"},
+        {"name": "poodle", "chance": 10, "image": "media/dogs/poodle.png", "emoji": "<:poodle_dog:1315075632455221370>"}
+        {"name": "shih tzu", "chance": 10, "image": "media/dogs/sitzu.png", "emoji": "<:shihtzu_dog:1287529708824821852>"},
+        {"name": "imposter","chance": 7, "image": "media/dogs/imposter.png", "emoji": "<:imposter_dog:1287818864578793473>"},
+        {"name": "sparkle dog","chance": 5, "image": "media/dogs/sparkledog.png", "emoji": "<:sparkle_dog:1315075376589836379>"},
         {"name": "angelic", "chance": 3, "image": "media/dogs/angelic_dog.png", "emoji": "<:biblicallyaccurate_dog:1287540670227021824>"},
-        {"name": "imposter","chance": 10, "image": "media/dogs/imposter.png", "emoji": "<:imposter_dog:1287818864578793473>"},
-        {"name": "eboy", "chance": 1, "image": "media/dogs/eboy.png", "emoji": "<:eboy_dog:1287818816243499112>"}    
+        {"name": "eboy", "chance": 0.5, "image": "media/dogs/eboy.png", "emoji": "<:eboy_dog:1287818816243499112>"}    
     ]
 }
