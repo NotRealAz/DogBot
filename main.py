@@ -216,7 +216,7 @@ async def inventory_command(interaction: discord.Interaction, member: discord.Me
     """
 
     if isinstance(interaction.channel, discord.DMChannel):
-        await interaction.response.send_message("This command cannot be used in DMs.", ephemeral=True)
+        await interaction.response.send_message("this command cannot be used in dms, try it in a server instead", ephemeral=True)
         return
 
     user_id = member.id if member else interaction.user.id
@@ -305,16 +305,16 @@ async def get_leaderboard(interaction: discord.Interaction):
 
 
 # info commmand. shows info about dogbot
-@bot.tree.command(name="info", description="Shows info about dogbot.")
+@bot.tree.command(name="info", description="Shows info about DogBot.")
 async def info_command(interaction: discord.Interaction):
     
-    """Shows info about dogbot."""
+    """Shows info about DogBot."""
     
     embed = discord.Embed(
         title="DogBot",
         description=("[Discord Server](https://discord.gg/7yv7DEz9a5)\n"
                      "[Github Page](https://github.com/NotRealAz/DogBot)\n\n"
-                     "Dog bot adds Dog hunting, silly commands, and more fun features!\n\n"
+                     "Dog bot adds Dog catching, silly commands, and more fun features!\n\n"
                      "List of features:"),
         color=discord.Color(0xFFA500)
     )
@@ -322,27 +322,27 @@ async def info_command(interaction: discord.Interaction):
     # Add fields
     embed.add_field(
         name="Dog Hunting",
-        value=("Many Dog Types such as mutt, husky, dalmatian, and more!\n"
+        value=("Many dog types such as Mutt, Husky, Dalmatian, and more!\n"
                "To catch them, type 'dog' when it spawns in a catching channel."),
         inline=True
     )
     
     embed.add_field(
         name="Commands",
-        value="Silly Little Commands For Fun!",
+        value="Silly commands for all your silly needs!",
         inline=True
     )
     
     embed.add_field(
         name="DogBoard (DogStand exclusive)",
         value=("Messages with 5 <:staring_dog:1285440635117113344> reactions "
-               "would appear in the dog board to see all of the horrendous or funny stuff people say."),
+               "would appear in the dog board to see all of the horrendous or funny stuff people say. status: not working"),
         inline=True
     )
     
     # Set footer and thumbnail
     embed.set_footer(
-        text="Dog Bot by notrealaz, Dog stand by meo.isnt.mayo",
+        text="Dog Bot by notrealaz, Dog Stand by meo.isnt.mayo",
         icon_url="https://github.com/NotRealAz/DogBot/blob/main/media/dogs/mutt.png?raw=true"
     )
     
@@ -356,15 +356,15 @@ async def info_command(interaction: discord.Interaction):
         await interaction.response.send_message("Failed to send the help message.", ephemeral=True)
 
 # help commmand. shows how to use dogbot
-@bot.tree.command(name="help", description="Shows how to use dogbot.")
+@bot.tree.command(name="help", description="Shows how to use DogBot.")
 async def help_command(interaction: discord.Interaction):
     
-    """Shows how to use dogbot."""
+    """Shows how to use DogBot."""
     
     embed1 = discord.Embed(
         title="How to Setup",
         description=("To set up catching, you need to use the `/setup_catching` command and specify 2 channels: "
-                     "one for `catching` and one for `slow catching`. "
+                     "one for `catching` and one for `slow catching`. If you wish for only one channel, enter the same channel in both fields. "
                      "(You need to be an admin or the owner to run this command), "
                      "dogs will start spawning every 5/10 minutes."),
         color=discord.Color(0xFFA500) 
@@ -382,7 +382,7 @@ async def help_command(interaction: discord.Interaction):
         name="Catching Dogs",
         value=("From time to time, dogs will spawn.\n\n"
                "To catch them, you must say `dog`. (If you can't catch the dog, "
-               "then it's glitched and doesn't count). Then the dog will be added to your inventory."),
+               "then it's glitched and doesn't count). The dog will then be added to your inventory."),
         inline=True
     )
     
@@ -395,7 +395,7 @@ async def help_command(interaction: discord.Interaction):
     
     embed2.add_field(
         name="Silly Commands",
-        value="Little silly commands to make Dog Bot more fun.",
+        value="Little silly commands to make DogBot more fun.",
         inline=True
     )
     
@@ -459,7 +459,7 @@ async def forcespawn_command(interaction: discord.Interaction, dogname: str):
     CATCHING_CHANNEL_ID, SLOW_CATCHING_CHANNEL_ID = config
     dog_spawn_channel = bot.get_channel(random.choice([SLOW_CATCHING_CHANNEL_ID, CATCHING_CHANNEL_ID]))
     if dog_spawn_channel is None:
-        await interaction.response.send_message("Couldn't find a valid channel to spawn the dog.", ephemeral=True)
+        await interaction.response.send_message("Couldn't find a valid channel to spawn the dog. Use /setup if you haven't already.", ephemeral=True)
         return
 
     # Make sure no dog is currently spawned
@@ -472,7 +472,7 @@ async def forcespawn_command(interaction: discord.Interaction, dogname: str):
     if os.path.exists(current_dog['image']):
         file = discord.File(current_dog['image'], filename=os.path.basename(current_dog['image']))
         dog_message = await dog_spawn_channel.send(
-            f"A {current_dog['emoji']} {current_dog['name']} has forcefully spawned! Type 'dog' to catch it!",
+            f"A {current_dog['emoji']} {current_dog['name']} has been forcefully spawned! Type 'dog' to catch it!",
             file=file
         )
 
@@ -483,9 +483,9 @@ async def forcespawn_command(interaction: discord.Interaction, dogname: str):
             "dog_spawn_channel": dog_spawn_channel
         }
 
-        await interaction.response.send_message(f"{current_dog['name']} has been forcefully spawned in {dog_spawn_channel.mention}!")
+        await interaction.response.send_message(f"{current_dog['name']} has been forcefully spawned in {dog_spawn_channel.mention}.")
     else:
-        await interaction.response.send_message(f"Error: File {current_dog['image']} not found!", ephemeral=True)
+        await interaction.response.send_message(f"Error: File {current_dog['image']} not found.", ephemeral=True)
 
 @bot.tree.command(name="battle", description="Battle dogs with another member!")
 async def battle_command(interaction: discord.Interaction, opponent: discord.User, dog_name: str):
@@ -510,12 +510,12 @@ async def battle_command(interaction: discord.Interaction, opponent: discord.Use
     user_dog = next((dog for dog in dogs if dog[0] == dog_name), None)
 
     if user_dog is None:
-        await interaction.response.send_message(f"There is no such thing as a '{dog_name}' in your inventory.", ephemeral=True)
+        await interaction.response.send_message(f"You have no '{dog_name}' in your inventory.", ephemeral=True)
         return
 
     # Notify opponent and ask them to select their dog
     embed = discord.Embed(
-        title="Dog Battle Challenge!",
+        title="A Dog Battle has been requested!",
         description=f"{interaction.user.name} challenges {opponent.name} to a battle with {dog_name}!",
         color=discord.Color.green()
     )
