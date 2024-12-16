@@ -37,12 +37,18 @@ and done!
     [Invite Dog Bot](https://discord.com/oauth2/authorize?client_id=1287505374328393768)
 
 2. Use Config Commands:
+
+    Setting up catching
     ```
-    /setup_catching catching_channel: text channel, slow_catching_channel:  text channel
+    /setup
     ```
+    
+    running this in a channel will add it to the catching list
 
 and done!. dog bot should work properly now
 
 ## Contributing
 
 * Contributions are welcome! Feel free to submit pull requests or open issues if you have any suggestions or bug fixes. See the [Contributing Guide](CONTRIBUTING.md) for more information.
+
+

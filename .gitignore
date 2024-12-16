@@ -3,3 +3,4 @@ databases/
 *.pyc
 __pycache__/
 *.db
+.vscode

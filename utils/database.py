@@ -25,11 +25,10 @@ class DB:
                 guild_id TEXT NOT NULL,
                 PRIMARY KEY (type, user_id, guild_id)
             );''')
-            self.conn.execute('''CREATE TABLE IF NOT EXISTS server_config (
-                catching_channel_id INTEGER NOT NULL,
-                slow_catching_channel_id INTEGER NOT NULL,
+            self.conn.execute('''CREATE TABLE IF NOT EXISTS server_channels (
+                channel_id INTEGER NOT NULL,
                 guild_id TEXT NOT NULL,
-                PRIMARY KEY (catching_channel_id, slow_catching_channel_id, guild_id)
+                PRIMARY KEY (channel_id, guild_id)
             );''')
 
     def add_dog(self, type, user_id, guild_id, amount=1):
@@ -114,39 +113,36 @@ class DB:
             
         return rarest_dog, top_users
 
-    def update_server_config(self, catching_channel_id, slow_catching_channel_id, guild_id):
-        """
-        Updates the server's configuration.
-        Uses ON CONFLICT to avoid separate INSERT and UPDATE queries.
-        """
+    def add_channel(self, channel_id: int, guild_id: int):
         with self.conn:
             cursor = self.conn.execute(
-                """INSERT INTO server_config (catching_channel_id, slow_catching_channel_id, guild_id)
-                   VALUES (?, ?, ?)
-                   ON CONFLICT(catching_channel_id, slow_catching_channel_id, guild_id) 
-                   DO UPDATE SET catching_channel_id = ?, slow_catching_channel_id = ?""",
-                (catching_channel_id, slow_catching_channel_id, guild_id, catching_channel_id, slow_catching_channel_id)
+                """INSERT OR IGNORE INTO server_channels (channel_id, guild_id) 
+                   VALUES (?, ?)""",
+                (channel_id, guild_id)
             )
-            return cursor.rowcount  # Return the number of affected rows
+            return cursor.rowcount
 
-    def list_server_config(self, guild_id):
-        """
-        Returns the server's configuration for a guild.
-        """
+
+    def remove_channel(self, channel_id, guild_id):
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT catching_channel_id, slow_catching_channel_id FROM server_config WHERE guild_id = ?",
+                "DELETE FROM server_channels WHERE channel_id = ? AND guild_id = ?",
+                (channel_id, guild_id)
+            )
+            return cursor.rowcount
+
+    def list_server_channels(self, guild_id):
+        with self.conn:
+            cursor = self.conn.execute(
+                "SELECT channel_id FROM server_channels WHERE guild_id = ?",
                 (guild_id,)
             )
-            result = cursor.fetchone()
-            return result if result else None  # Return None if no config found
-        
-    def clear_server_config(self, guild_id):
-        """
-        Clears the server's configuration for a guild.
-        """
+            result = cursor.fetchall()
+            return [row[0] for row in result]
+
+    def clear_server_channels(self, guild_id):
         with self.conn:
-            self.conn.execute("DELETE FROM server_config WHERE guild_id = ?", (guild_id,))
+            self.conn.execute("DELETE FROM server_channels WHERE guild_id = ?", (guild_id,))
 
     def __enter__(self):
         """

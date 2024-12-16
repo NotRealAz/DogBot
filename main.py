@@ -2,6 +2,7 @@ import asyncio
 from typing import List, Tuple
 import discord
 from discord.ext import commands, tasks
+from discord.ui import Button, View
 import os
 from dotenv import load_dotenv
 import aiohttp
@@ -18,7 +19,7 @@ load_dotenv()
 # Server config
 db = DB()
 
-# Load dog data from file
+# Load dog json from file, important step
 try:
     with open("config/dogs.json") as f:
         dog_data = json.load(f)
@@ -32,21 +33,39 @@ except json.JSONDecodeError as e:
 
 # Initialize variables
 guild_dog_states = {}
-current_dog = None
-dog_message = None
-dog_spawn_channel = None  # Track where the dog spawned
 
-# Define intents and create bot instance
+# intents and bot instance
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True  # Needed for slash commands
 bot = commands.Bot(command_prefix='!dog=', intents=intents)
 
+EMOJI_ID = "<:staring_dog:1285440635117113344>"
+PROCESSED_IDS_FILE = "databases/processed_ids.json"
+
+# Load processed message IDs from file
+def load_processed_ids():
+    if os.path.exists(PROCESSED_IDS_FILE):
+        try:
+            with open(PROCESSED_IDS_FILE, "r") as file:
+                data = json.load(file)
+                if isinstance(data, list):
+                    return set(data)
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"Error loading JSON file: {e}")
+    return set()
+
+# Save processed message IDs to file
+def save_processed_ids(processed_ids):
+    with open(PROCESSED_IDS_FILE, "w") as file:
+        json.dump(list(processed_ids), file)
+
+# Initialize the processed message IDs
+processed_message_ids = load_processed_ids()
+
 @bot.event
 async def on_ready():
-
     """Triggered when the bot is ready."""
-
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.playing, name=f"in {len(bot.guilds):,} servers!")
     )
@@ -55,12 +74,11 @@ async def on_ready():
     if not send_dog_message.is_running():
         send_dog_message.start()
 
-    await bot.tree.sync()  # Sync commands with Discord
+    await bot.tree.sync()  # Sync commands
 
-def get_random_dog() -> dict:
 
+def get_random_dog():
     """Helper function to get a random dog based on chance."""
-
     total_chance = sum(dog["chance"] for dog in dogs)
     roll = random.uniform(0, total_chance)
     upto = 0
@@ -69,63 +87,58 @@ def get_random_dog() -> dict:
             return dog
         upto += dog["chance"]
 
-@tasks.loop(minutes=random.randint(5, 10))
+@tasks.loop(minutes=random.randint(1, 5))
 async def send_dog_message():
-
     """Periodically sends a message to spawn a random dog in configured channels."""
-
     for guild in bot.guilds:
         try:
-            config = db.list_server_config(guild.id)
+            # Get the list of channels where dogs can spawn for this guild
+            dog_channels = db.list_server_channels(guild.id)
 
-            if config is None:
-                continue
+            for channel_id in dog_channels:
+                channel = bot.get_channel(channel_id)
+                if channel is None:
+                    print(f"Skipping guild {guild.name}: Invalid channel {channel_id}.")
+                    continue
 
-            CATCHING_CHANNEL_ID, SLOW_CATCHING_CHANNEL_ID = config
-            if CATCHING_CHANNEL_ID is None or SLOW_CATCHING_CHANNEL_ID is None:
-                continue
+                guild_state = guild_dog_states.get(guild.id, {})
+                channel_state = guild_state.get(channel_id, {"current_dog": None, "dog_message": None})
 
-            guild_state = guild_dog_states.get(guild.id, {"current_dog": None, "dog_message": None})
+                if channel_state["current_dog"] is not None:
+                    continue  # Skip if a dog has already spawned in this channel
 
-            if guild_state["current_dog"] is not None:
-                continue
+                current_dog = get_random_dog()
+                if os.path.exists(current_dog['image']):
+                    file = discord.File(current_dog['image'], filename=os.path.basename(current_dog['image']))
+                    dog_message = await channel.send(
+                          f"A {current_dog['emoji']} {current_dog['name']} has spawned! Type 'dog' to catch it!",
+                          file=file
+                    )
+                else:
+                    print(f"Error: File {current_dog['image']} not found!")
+                    return
 
-            dog_spawn_channel = bot.get_channel(random.choice([SLOW_CATCHING_CHANNEL_ID, CATCHING_CHANNEL_ID]))
-            if dog_spawn_channel is None:
-                print(f"Skipping guild {guild.name}: Invalid catching channels.")
-                continue
-
-            current_dog = get_random_dog()
-            if os.path.exists(current_dog['image']):
-                file = discord.File(current_dog['image'], filename=os.path.basename(current_dog['image']))
-                dog_message = await dog_spawn_channel.send(
-                    f"A {current_dog['emoji']} {current_dog['name']} has spawned! Type 'dog' to catch it!",
-                    file=file
-                )
-            else:
-                print(f"Error: File {current_dog['image']} not found!")
-                continue
-
-            guild_dog_states[guild.id] = {
-                "current_dog": current_dog,
-                "dog_message": dog_message,
-                "dog_spawn_channel": dog_spawn_channel
-            }
+                # Save the current dog and message for this channel
+                if guild.id not in guild_dog_states:
+                    guild_dog_states[guild.id] = {}
+                guild_dog_states[guild.id][channel_id] = {
+                    "current_dog": current_dog,
+                    "dog_message": dog_message
+                }
 
         except Exception as e:
             print(f"Error spawning dog in {guild.name}: {e}")
 
 @bot.event
 async def on_message(message):
-    
-    """Handles dog catching logic and custom phrases like 'horse' and 'fog'."""
-
+    """Handles dog catching logic and custom phrases."""
     if isinstance(message.channel, discord.DMChannel) or message.author == bot.user:
         return
 
-    guild_state = guild_dog_states.get(message.guild.id, {"current_dog": None, "dog_message": None})
-    current_dog = guild_state["current_dog"]
-    dog_message = guild_state["dog_message"]
+    guild_state = guild_dog_states.get(message.guild.id, {})
+    channel_state = guild_state.get(message.channel.id, {"current_dog": None, "dog_message": None})
+    current_dog = channel_state["current_dog"]
+    dog_message = channel_state["dog_message"]
 
     if message.content.lower() == 'dog' and current_dog is not None:
         if message.channel.id == dog_message.channel.id:
@@ -144,7 +157,8 @@ async def on_message(message):
                                        f'You have now caught {amount} dogs of that type!!!\n'
                                        f'This fella was caught in {int(elapsed_time)} seconds!!!')
 
-            guild_dog_states[message.guild.id] = {"current_dog": None, "dog_message": None}
+            # Clear the state for this channel
+            guild_dog_states[message.guild.id][message.channel.id] = {"current_dog": None, "dog_message": None}
 
     elif message.content == "horse":
         embed = discord.Embed(title="Horse!")
@@ -157,6 +171,60 @@ async def on_message(message):
         await message.channel.send(embed=embed, file=discord.File('media/fog.png'))
 
     await bot.process_commands(message)
+
+@bot.event
+async def on_raw_reaction_add(payload):
+    emoji = EMOJI_ID
+
+    if payload.guild_id not in (None, 1285438304518406174) or str(payload.emoji) != EMOJI_ID:
+        return
+
+    if str(payload.emoji) == emoji:
+        # Fetch the message and channel
+        channel = bot.get_channel(payload.channel_id)
+        try:
+            message = await channel.fetch_message(payload.message_id)
+        except discord.NotFound:
+            print("Message not found.")
+            return
+        except discord.Forbidden:
+            print("Bot does not have permissions to fetch the message.")
+            return
+
+        # Check if the message has already been processed
+        if message.id in processed_message_ids:
+            return
+        
+        # Check if the staring dog emoji has enough reactions
+        for reaction in message.reactions:
+            if str(reaction.emoji) == emoji and reaction.count >= 1:
+                # Create the embed
+                embed = discord.Embed(
+                    description=message.content or "No Content", 
+                    url=message.jump_url
+                )
+                if message.attachments:
+                    embed.set_image(url=message.attachments[0].url)
+                embed.set_author(
+                    name=message.author.display_name, 
+                    icon_url=message.author.display_avatar.url
+                )
+                embed.set_footer(
+                    text=f"Channel: {message.channel.name} • Guild: {message.guild.name}"
+                )
+
+                # Create a button to jump to the original message
+                button = Button(label="Jump to message", url=message.jump_url)
+                view = View()
+                view.add_item(button)
+
+                # Send the embed with the button to the target channel
+                target_channel = bot.get_channel(1287625403803897908)
+                await target_channel.send(embed=embed, view=view)
+
+                # Add the message ID to the processed list (so you cant spam it..)
+                processed_message_ids.add(message.id)
+                save_processed_ids(processed_message_ids)
 
 @bot.tree.command(name="ping", description="Check bot latency")
 async def ping_command(interaction: discord.Interaction):
@@ -203,7 +271,7 @@ async def dog_fact_command(interaction: discord.Interaction):
                 data = await response.json()
                 await interaction.followup.send(data["data"][0]["attributes"]["body"])
             else:
-                await interaction.followup.send("Failed to fetch a dog fact.")
+                await interaction.followup.send("Failed to fetch a dog fact.", ephemeral=True)
 
 @bot.tree.command(name="inventory", description="See all of your dawgs")
 async def inventory_command(interaction: discord.Interaction, member: discord.Member = None):
@@ -222,10 +290,8 @@ async def inventory_command(interaction: discord.Interaction, member: discord.Me
     user_id = member.id if member else interaction.user.id
     guild_id = interaction.guild.id 
 
-    # Fetch dogs from the database
     dogs = db.list_dogs(user_id, guild_id)
 
-    # Prepare the embed
     embed = discord.Embed(title="Dogs", description="Here are all your dogs:", color=discord.Color.blue())
     display_member = member or interaction.user  # Choose the member to display
     embed.set_author(name=display_member.display_name, icon_url=display_member.avatar.url)
@@ -235,7 +301,6 @@ async def inventory_command(interaction: discord.Interaction, member: discord.Me
         for dog in dogs:
             embed.add_field(name=dog[0], value=dog[1], inline=True)
     else:
-        # Set the appropriate message if there are no dogs
         no_dogs_msg = f"{display_member.display_name} doesn't have any dogs in their inventory." if member else "You don't have any dogs in your inventory."
         embed.description = no_dogs_msg
 
@@ -295,7 +360,7 @@ async def get_leaderboard(interaction: discord.Interaction):
             embed.add_field(
                 name="",  # Rank number (1, 2, 3...)
                 value=f"{index+1}.  {total_amount:,} dogs: <@{user_id}>",  # User's dog count and mention
-                inline=False  # Ensure each field is not inlined
+                inline=False
             )
     else:
         embed.add_field(name="No users found", value="No data available.", inline=False)
@@ -336,7 +401,7 @@ async def info_command(interaction: discord.Interaction):
     embed.add_field(
         name="DogBoard (DogStand exclusive)",
         value=("Messages with 5 <:staring_dog:1285440635117113344> reactions "
-               "would appear in the dog board to see all of the horrendous or funny stuff people say. status: not working"),
+               "would appear in the dog board to see all of the horrendous or funny stuff people say."),
         inline=True
     )
     
@@ -363,10 +428,7 @@ async def help_command(interaction: discord.Interaction):
     
     embed1 = discord.Embed(
         title="How to Setup",
-        description=("To set up catching, you need to use the `/setup_catching` command and specify 2 channels: "
-                     "one for `catching` and one for `slow catching`. If you wish for only one channel, enter the same channel in both fields. "
-                     "(You need to be an admin or the owner to run this command), "
-                     "dogs will start spawning every 5/10 minutes."),
+        description=("To set up catching, you need to use the `/setup` command on a channel that you want dogs to spawn in, after you run the command dogs will start spawning there every 1/5 minutes."),
         color=discord.Color(0xFFA500) 
     )
 
@@ -409,83 +471,45 @@ async def help_command(interaction: discord.Interaction):
     except discord.errors.NotFound:
         await interaction.response.send_message("Failed to send the help message.", ephemeral=True)
 
-@bot.tree.command(name="setup_catching", description="Set up configuration for catching (slow and normal).")
-async def setup_catching_command(interaction: discord.Interaction, catching_channel: discord.TextChannel, slow_catching_channel: discord.TextChannel):
+@bot.tree.command(name="setup", description="Set up configuration for catching")
+async def setup(interaction: discord.Interaction):
     """
-    Set up configuration for catching (slow and normal) by specifying the two channels to use.
+    When this is ran, it adds the channel the command was ran in to the list of channels for catching.
 
-    Only the server owner or users with administrator permissions can run this command
-
-    Parameters:.
-    - `catching_channel`: The channel where dogs will spawn at a normal rate.
-    - `slow_catching_channel`: The channel where dogs will spawn at a normal rate but the channel has a 6 hour slow mode.
+    Only the server owner or users with administrator permissions can run this command.
     """
 
+    # Check if the user has administrator permissions or is the server owner
     if not interaction.user.guild_permissions.administrator and interaction.user.id != interaction.guild.owner.id:
         await interaction.response.send_message("You don't have permission to run this command.", ephemeral=True)
         return
 
-    if db.list_server_config(interaction.guild.id) is None:
-        db.update_server_config(catching_channel.id, slow_catching_channel.id, interaction.guild.id)
-    else:
-        db.clear_server_config(interaction.guild.id)
-        db.update_server_config(catching_channel.id, slow_catching_channel.id, interaction.guild.id)
-    
-    if not send_dog_message.is_running():
-        await send_dog_message.start()
-    
-    await interaction.response.send_message(f"Catching channels have been configured for this server! {catching_channel.mention} and {slow_catching_channel.mention}", ephemeral=True)
+    # Add the current channel to the list of channels for catching in the database
+    channel_id = interaction.channel.id
+    guild_id = interaction.guild.id
 
-@bot.tree.command(name="forcespawn", description="forces a dog to spawn.")
-async def forcespawn_command(interaction: discord.Interaction, dogname: str):
+    try:
+        server_channels = db.list_server_channels(guild_id)
+        if channel_id not in server_channels:
+            db.add_channel(channel_id, guild_id)
+            await interaction.response.send_message(f"The channel {interaction.channel.name} has been set up for catching!", ephemeral=True)
+        else:
+            button = Button(label="Remove", style=discord.ButtonStyle.danger, custom_id="remove_channel")
+            view = View()
+            view.add_item(button)
+            
+            async def remove_channel_callback(interaction: discord.Interaction):
+                db.remove_channel(channel_id, guild_id)
+                await interaction.response.edit_message(content=f"The channel {interaction.channel.mention} has been removed from the catching channels.", view=None)
+            
+            button.callback = remove_channel_callback
 
-    """Force spawns a specific dog."""
+            await interaction.response.send_message(f"The channel {interaction.channel.mention} is already set up for catching.", ephemeral=True, view=view)
+    except Exception as e:
+        await interaction.response.send_message(f"An error occurred while setting up the channel: {type(e).__name__}: {e}", ephemeral=True)
 
-    if not interaction.user.guild_permissions.moderate_members or interaction.user.id != interaction.guild.owner_id:
-        await interaction.response.send_message("You don't have permission to run this command.", ephemeral=True)
-        return
 
-    # Find the dog with the given name
-    current_dog = next((dog for dog in dogs if dog["name"].lower() == dogname.lower()), None)
-    if current_dog is None:
-        await interaction.response.send_message(f"{dogname} doesn't exist in the database.", ephemeral=True)
-        return
-
-    config = db.list_server_config(interaction.guild.id)
-    if config is None:
-        await interaction.response.send_message("Configuration error for this server.", ephemeral=True)
-        return
-
-    CATCHING_CHANNEL_ID, SLOW_CATCHING_CHANNEL_ID = config
-    dog_spawn_channel = bot.get_channel(random.choice([SLOW_CATCHING_CHANNEL_ID, CATCHING_CHANNEL_ID]))
-    if dog_spawn_channel is None:
-        await interaction.response.send_message("Couldn't find a valid channel to spawn the dog. Use /setup if you haven't already.", ephemeral=True)
-        return
-
-    # Make sure no dog is currently spawned
-    guild_state = guild_dog_states.get(interaction.guild.id, {"current_dog": None, "dog_message": None})
-    if guild_state["current_dog"] is not None:
-        await interaction.response.send_message("A dog is already spawned!", ephemeral=True)
-        return
-
-    # Set the spawn type to "forcespawn" and send the dog message
-    if os.path.exists(current_dog['image']):
-        file = discord.File(current_dog['image'], filename=os.path.basename(current_dog['image']))
-        dog_message = await dog_spawn_channel.send(
-            f"A {current_dog['emoji']} {current_dog['name']} has been forcefully spawned! Type 'dog' to catch it!",
-            file=file
-        )
-
-        # Update the guild state with the forced dog spawn info
-        guild_dog_states[interaction.guild.id] = {
-            "current_dog": current_dog,
-            "dog_message": dog_message,
-            "dog_spawn_channel": dog_spawn_channel
-        }
-
-        await interaction.response.send_message(f"{current_dog['name']} has been forcefully spawned in {dog_spawn_channel.mention}.")
-    else:
-        await interaction.response.send_message(f"Error: File {current_dog['image']} not found.", ephemeral=True)
+# forcespawn unmaintanied. TODO: fix forcespawn
 
 @bot.tree.command(name="battle", description="Battle dogs with another member!")
 async def battle_command(interaction: discord.Interaction, opponent: discord.User, dog_name: str):
@@ -513,7 +537,6 @@ async def battle_command(interaction: discord.Interaction, opponent: discord.Use
         await interaction.response.send_message(f"You have no '{dog_name}' in your inventory.", ephemeral=True)
         return
 
-    # Notify opponent and ask them to select their dog
     embed = discord.Embed(
         title="A Dog Battle has been requested!",
         description=f"{interaction.user.name} challenges {opponent.name} to a battle with {dog_name}!",
