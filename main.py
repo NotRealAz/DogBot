@@ -197,7 +197,7 @@ async def on_raw_reaction_add(payload):
         
         # Check if the staring dog emoji has enough reactions
         for reaction in message.reactions:
-            if str(reaction.emoji) == emoji and reaction.count >= 1:
+            if str(reaction.emoji) == emoji and reaction.count >= 5:
                 # Create the embed
                 embed = discord.Embed(
                     description=message.content or "No Content", 
