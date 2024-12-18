@@ -87,7 +87,7 @@ def get_random_dog():
             return dog
         upto += dog["chance"]
 
-@tasks.loop(minutes=random.randint(1, 5))
+@tasks.loop(minutes=random.randint(3, 7))
 async def send_dog_message():
     """Periodically sends a message to spawn a random dog in configured channels."""
     for guild in bot.guilds:
