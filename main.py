@@ -94,7 +94,7 @@ def ClaimAch(gid: int, uid: int, id: str, Callback: callable):
         Achievement.Claim(gid, uid, id)
         Callback()
 
-@tasks.loop(minutes=random.randint(3, 7))
+@tasks.loop(minutes=random.randint(1, 5))
 async def send_dog_message():
     """Periodically sends a message to spawn a random dog in configured channels."""
     for guild in bot.guilds:
