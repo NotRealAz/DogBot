@@ -290,7 +290,7 @@ async def on_message(message):
         embed = discord.Embed(
             color=discord.Color(0x265526),
             title="yeah!",
-            description="no. Absolutely not. Please seek professional help."
+            description="✅✅✅" # this is what limited time does
         )
         embed.set_author(
             name="Achievement Unlocked!",
@@ -308,7 +308,7 @@ async def on_message(message):
         ClaimAch(
             message.guild.id,
             message.author.id,
-            "banished",
+            "yeah",
             lambda: asyncio.create_task(callback())
         )
 
@@ -499,7 +499,7 @@ async def on_message(message):
         ClaimAch(
             message.guild.id,
             message.author.id,
-            "sog",
+            "huh",
             lambda: asyncio.create_task(callback())
         )
 
@@ -577,7 +577,7 @@ async def on_message(message):
         ClaimAch(
             message.guild.id,
             message.author.id,
-            "this_dock_is_holding_an_apple",
+            "canon",
             lambda: asyncio.create_task(callback())
         )
 
