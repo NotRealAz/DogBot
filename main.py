@@ -865,7 +865,7 @@ async def leaderboard_command(interaction: discord.Interaction):
         rarest_dog, top_users = data["data"]
         
         embed.title = data["title"]
-        embed.description = f"Rarest dog: {rarest_dog[0]} ({rarest_dog[1]} exist)" if rarest_dog else "No data available."
+        embed.description = f"Rarest dog: {rarest_dog[0]} ({rarest_dog[1]} exist)" if rarest_dog else ""
         embed.set_footer(text=data["footer"])
         
         if top_users:
@@ -897,7 +897,7 @@ async def leaderboard_command(interaction: discord.Interaction):
         top_users = [(user_id, amount) for user_id, amount in all_top_users.items() if amount >= 20]
         top_users.sort(key=lambda x: x[1], reverse=True)
 
-        return rarest_dog, top_users
+        return {}, top_users
 
     # Button callbacks
     async def leaderboard_callback(interaction: discord.Interaction, leaderboard_type: str):
