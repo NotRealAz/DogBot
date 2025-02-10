@@ -12,6 +12,7 @@ import time
 
 # local files
 from utils.database import DB
+from utils.ach import Achievement
 
 # Load environment variables
 load_dotenv()
@@ -87,6 +88,12 @@ def get_random_dog():
             return dog
         upto += dog["chance"]
 
+def ClaimAch(gid: int, uid: int, id: str, Callback: callable):
+    achievements = Achievement.Retrieve(gid, uid)
+    if not any(ach['ID'] == id for ach in achievements):
+        Achievement.Claim(gid, uid, id)
+        Callback()
+
 @tasks.loop(minutes=random.randint(1, 5))
 async def send_dog_message():
     """Periodically sends a message to spawn a random dog in configured channels."""
@@ -99,6 +106,15 @@ async def send_dog_message():
                 channel = bot.get_channel(channel_id)
                 if channel is None:
                     print(f"Skipping guild {guild.name}: Invalid channel {channel_id}.")
+                    continue
+
+                permissions = channel.permissions_for(guild.me)
+                if not permissions.send_messages or not permissions.view_channel:
+                    print(f"Removing channel {channel_id} from guild {guild.id} because the bot can't send messages or view the channel.")
+                    try:
+                        db.remove_channel(channel_id, guild.id)
+                    except Exception as e:
+                        print(f"Error removing channel {channel_id} from database: {e}")
                     continue
 
                 guild_state = guild_dog_states.get(guild.id, {})
@@ -148,10 +164,119 @@ async def on_message(message):
 
             await dog_message.delete()
 
+            embed = discord.Embed(title="Dog!")
+            embed.set_image(url="attachment://Dog.png")
+
+            if current_dog['name'] == "eboy":
+                embedC = discord.Embed(
+                    color=discord.Color(0x265526),
+                    title="professional gamer",
+                    description="touch grass please <a:typing:1336980116554645534>"
+                )
+                embedC.set_author(
+                    name="Achievement Unlocked!",
+                    icon_url="attachment://achievements.png"
+                )
+                embedC.set_footer(text=f"Unlocked by {message.author.name}")
+
+                async def callback():
+                    try:
+                        await message.channel.send(embed=embedC, file=discord.File('media/achievements.png'))
+                    except discord.HTTPException as e:
+                        print(f"Error sending achievement: {e}")
+
+                # Claim the achievement
+                ClaimAch(
+                    message.guild.id,
+                    message.author.id,
+                    "professional_gamer",
+                    lambda: asyncio.create_task(callback())
+                )
+            
+            if current_dog['name'] == "sparkle dog":
+                embedC = discord.Embed(
+                    color=discord.Color(0x265526),
+                    title="pretty scene girl!!",
+                    description="you know this pretty scene girl"
+                )
+                embedC.set_author(
+                    name="Achievement Unlocked!",
+                    icon_url="attachment://achievements.png"
+                )
+                embedC.set_footer(text=f"Unlocked by {message.author.name}")
+
+                async def callback():
+                    try:
+                        await message.channel.send(embed=embedC, file=discord.File('media/achievements.png'))
+                    except discord.HTTPException as e:
+                        print(f"Error sending achievement: {e}")
+
+                # Claim the achievement
+                ClaimAch(
+                    message.guild.id,
+                    message.author.id,
+                    "pretty_scene_girl",
+                    lambda: asyncio.create_task(callback())
+                )
+
+            if elapsed_time < 5:
+                embed = discord.Embed(
+                    color=discord.Color(0x265526),
+                    title="fast dog",
+                    description="caught a dog in under 5 seconds! speedy, are we?"
+                )
+                embed.set_author(
+                    name="Achievement Unlocked!",
+                    icon_url="attachment://achievements.png"
+                )
+                embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+                async def callback():
+                    try:
+                        await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+                    except discord.HTTPException as e:
+                        print(f"Error sending achievement: {e}")
+
+                # Claim the achievement
+                ClaimAch(
+                    message.guild.id,
+                    message.author.id,
+                    "fast_dog",
+                    lambda: asyncio.create_task(callback())
+                )
+
+
             db.add_dog(current_dog['name'], message.author.id, message.guild.id, 1)
 
             dogs = db.list_dogs(message.author.id, message.guild.id)
             amount = next((dog[1] for dog in dogs if dog[0] == current_dog['name']), 0)
+
+            if amount >= 1000:
+                embed = discord.Embed(
+                    color=discord.Color(0x265526),
+                    title="ZOO WEE MAMA",
+                    description="gimme some of those"
+                )
+                embed.set_author(
+                    name="Achievement Unlocked!",
+                    icon_url="attachment://achievements.png"
+                )
+                embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+                async def callback():
+                    try:
+                        await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+                    except discord.HTTPException as e:
+                        print(f"Error sending achievement: {e}")
+
+                # Claim the achievement
+                ClaimAch(
+                    message.guild.id,
+                    message.author.id,
+                    "ZOO_WEE_MAMA",
+                    lambda: asyncio.create_task(callback())
+                )
+
 
             await message.channel.send(f'{message.author.name} caught {current_dog["emoji"]} {current_dog["name"]} dog!!!\n'
                                        f'You have now caught {amount} dogs of that type!!!\n'
@@ -159,16 +284,354 @@ async def on_message(message):
 
             # Clear the state for this channel
             guild_dog_states[message.guild.id][message.channel.id] = {"current_dog": None, "dog_message": None}
+            
+
+    elif message.content.lower() == "I forfeit all mortal possessions to dog":
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="yeah!",
+            description="no. Absolutely not. Please seek professional help."
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "banished",
+            lambda: asyncio.create_task(callback())
+        )
 
     elif message.content == "horse":
         embed = discord.Embed(title="Horse!")
         embed.set_image(url="attachment://Horse.png")
+        embedC = discord.Embed(
+            color=discord.Color(0x265526),
+            title="🏇",
+            description="actually it’s ‘dog’… but horse is fine..?"
+        )
+        embedC.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embedC.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embedC, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "honse",
+            lambda: asyncio.create_task(callback())
+        )
+
         await message.channel.send(embed=embed, file=discord.File('media/Horse.png'))
+
+    elif "the game" in message.content.lower():
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="I hate you",
+            description="…"
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "I_hate_you",
+            lambda: asyncio.create_task(callback())
+        )
+
+    elif message.content.lower() == "please do not the dog":
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="please do not the dog",
+            description="that’s not a meme?? ok…"
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "please_do_not_the_dog",
+            lambda: asyncio.create_task(callback())
+        )
+
 
     elif message.content.lower() == "fog":
         embed = discord.Embed(title="fog.")
         embed.set_image(url="attachment://fog.png")
+
+        embedC = discord.Embed(
+            color=discord.Color(0x265526),
+            title="fog <:fog:1287611863290609684>",
+            description="fog"
+        )
+        embedC.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embedC.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embedC, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "fog",
+            lambda: asyncio.create_task(callback())
+        )
         await message.channel.send(embed=embed, file=discord.File('media/fog.png'))
+
+    elif message.content.lower() == "cat":
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="BANISHED <:banished:1302758222201098341>",
+            description="no. Absolutely not. Please seek professional help."
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "banished",
+            lambda: asyncio.create_task(callback())
+        )
+        
+    elif message.content.lower() == "sog":
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="sog",
+            description="<:uhok:1289028276672663552>"
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "sog",
+            lambda: asyncio.create_task(callback())
+        )
+
+    elif message.content.lower() == "huh":
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="huh",
+            description="huh"
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "sog",
+            lambda: asyncio.create_task(callback())
+        )
+
+    elif message.content.lower() == "bwaa":
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="bwaa",
+            description="bwaa"
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "bwaa",
+            lambda: asyncio.create_task(callback())
+        )
+
+    elif message.content.lower() in ["appel", "april"]:
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="this dock is holding an 🍎 April in its Melt",
+            description="🍎🍎🍎"
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "this_dock_is_holding_an_apple",
+            lambda: asyncio.create_task(callback())
+        )
+
+    elif message.content.lower() in ["shiba x husky", "husky x shiba", "shusky"]:
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="canon",
+            description="they've kissed before"
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "this_dock_is_holding_an_apple",
+            lambda: asyncio.create_task(callback())
+        )
+
+    elif message.content.lower() in ["I love cat", "cat > dog"]:
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="on the run",
+            description="run faster"
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "on_the_run",
+            lambda: asyncio.create_task(callback())
+        )
+
+    elif message.content.lower() in ["1+1=2", "1 + 1 = 2"]:
+        embed = discord.Embed(
+            color=discord.Color(0x265526),
+            title="Mathematician",
+            description="You passed kindergarten!"
+        )
+        embed.set_author(
+            name="Achievement Unlocked!",
+            icon_url="attachment://achievements.png"
+        )
+        embed.set_footer(text=f"Unlocked by {message.author.name}")
+
+        async def callback():
+            try:
+                await message.channel.send(embed=embed, file=discord.File('media/achievements.png'))
+            except discord.HTTPException as e:
+                print(f"Error sending achievement: {e}")
+
+        # Claim the achievement
+        ClaimAch(
+            message.guild.id,
+            message.author.id,
+            "mathematician",
+            lambda: asyncio.create_task(callback())
+        )
 
     await bot.process_commands(message)
 
@@ -309,6 +772,39 @@ async def inventory_command(interaction: discord.Interaction, member: discord.Me
     except discord.errors.NotFound:
         await interaction.followup.send("Unknown interaction.", ephemeral=True)
 
+@bot.tree.command(name="achievements", description="See your achievements")
+async def achievements(interaction: discord.Interaction, member: discord.Member = None):
+    """
+    Shows all achievements a user has earned.
+
+    If the user has no achievements, it will say so in the embed.
+    """
+
+    if isinstance(interaction.channel, discord.DMChannel):
+        await interaction.response.send_message("This command cannot be used in DMs, try it in a server instead.", ephemeral=True)
+        return
+
+    user_id = member.id if member else interaction.user.id
+    guild_id = interaction.guild.id 
+
+    achievements = Achievement.Retrieve(guild_id, user_id)
+
+    embed = discord.Embed(title="Achievements", description="Here are your achievements:", color=discord.Color.gold())
+    display_member = member or interaction.user  
+    embed.set_author(name=display_member.display_name, icon_url=display_member.avatar.url)
+
+    if achievements:
+        for achievement in achievements:
+            name = achievement.get("name", "Unknown Achievement")
+            embed.add_field(name=f"🏆 | {name}", value="\u200b", inline=False)  # Empty value to just display name
+    else:
+        embed.description = f"{display_member.display_name} hasn't earned any achievements yet." if member else "You haven't earned any achievements yet."
+
+    try:
+        await interaction.response.send_message(embed=embed)
+    except discord.errors.NotFound:
+        await interaction.followup.send("Unknown interaction.", ephemeral=True)
+
 @bot.tree.command(name="force_remove", description="remove dogs from someones inventory")
 async def force_remove(interaction: discord.Interaction, member: discord.Member, dog: str, amount: int):
 
@@ -343,30 +839,86 @@ async def force_remove(interaction: discord.Interaction, member: discord.Member,
     await interaction.response.send_message(f"Removed {amount} {dog} from {member.display_name}'s inventory.", ephemeral=True)
 
 @bot.tree.command(name="leaderboard", description="Shows the leaderboard")
-async def get_leaderboard(interaction: discord.Interaction):
-    guild_id = interaction.guild.id  # Get guild ID from the interaction
-    rarest_dog, top_users = db.get_leaderboard(guild_id)  # Call the db method
+async def leaderboard_command(interaction: discord.Interaction):
+    """
+    Shows the leaderboard for the current server or globally.
+    """
+    view = View()
 
-    # Create the embed for leaderboard
-    embed = discord.Embed(
-        title=f"Dogs Leaderboard",
-        description=f"Rarest dog: {rarest_dog[0]} ({rarest_dog[1]} exist)" if rarest_dog else "No data available.",
-        color=discord.Color.blue()  # Set the color of the embed
-    )
+    async def gather_leaderboard_data(leaderboard_type: str, guild_id: int = None) -> discord.Embed:
+        embed = discord.Embed(color=discord.Color.blue())
+        
+        leaderboard_data = {
+            "server": {
+                "title": "Dogs Leaderboard (Server)",
+                "footer": "Server Leaderboard",
+                "data": db.get_leaderboard(guild_id)
+            },
+            "global": {
+                "title": "Dogs Leaderboard (Global)",
+                "footer": "Global Leaderboard",
+                "data": await get_global_leaderboard()
+            }
+        }
+        
+        data = leaderboard_data[leaderboard_type]
+        rarest_dog, top_users = data["data"]
+        
+        embed.title = data["title"]
+        embed.description = f"Rarest dog: {rarest_dog[0]} ({rarest_dog[1]} exist)" if rarest_dog else "No data available."
+        embed.set_footer(text=data["footer"])
+        
+        if top_users:
+            for index, (user_id, total_amount) in enumerate(top_users):
+                embed.add_field(
+                    name=f"{index+1}.",
+                    value=f"{total_amount:,} dogs: <@{user_id}>",
+                    inline=False
+                )
+        else:
+            embed.add_field(name="No users found", value="No data available.", inline=False)
+        
+        return embed
 
-    # Add each top user as a separate field (with rank number)
-    if top_users:
-        for index, (user_id, total_amount) in enumerate(top_users):
-            embed.add_field(
-                name="",  # Rank number (1, 2, 3...)
-                value=f"{index+1}.  {total_amount:,} dogs: <@{user_id}>",  # User's dog count and mention
-                inline=False
-            )
-    else:
-        embed.add_field(name="No users found", value="No data available.", inline=False)
+    async def get_global_leaderboard():
+        all_top_users = {}
+        rarest_dog = None
 
-    # Send the embed as a response to the interaction
-    await interaction.response.send_message(embed=embed)
+        for guild in bot.guilds:
+            guild_rarest_dog, guild_top_users = db.get_leaderboard(guild.id)
+
+            if guild_rarest_dog:
+                if rarest_dog is None or guild_rarest_dog[1] < rarest_dog[1]:
+                    rarest_dog = guild_rarest_dog
+
+            for user_id, amount in guild_top_users:
+                all_top_users[user_id] = all_top_users.get(user_id, 0) + amount
+
+        top_users = [(user_id, amount) for user_id, amount in all_top_users.items() if amount >= 20]
+        top_users.sort(key=lambda x: x[1], reverse=True)
+
+        print(top_users)
+
+        return rarest_dog, top_users
+
+    # Button callbacks
+    async def leaderboard_callback(interaction: discord.Interaction, leaderboard_type: str):
+        await interaction.response.defer()
+        embed = await gather_leaderboard_data(leaderboard_type, interaction.guild.id)
+        await interaction.edit_original_response(embed=embed)
+
+    # Create buttons
+    server_button = Button(label="Server", style=discord.ButtonStyle.primary)
+    global_button = Button(label="Global", style=discord.ButtonStyle.primary)
+
+    server_button.callback = lambda i: leaderboard_callback(i, "server")
+    global_button.callback = lambda i: leaderboard_callback(i, "global")
+
+    view.add_item(server_button)
+    view.add_item(global_button)
+
+    embed = await gather_leaderboard_data("server", interaction.guild.id)
+    await interaction.response.send_message(embed=embed, view=view)
 
 
 # info commmand. shows info about dogbot
