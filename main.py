@@ -286,7 +286,7 @@ async def on_message(message):
             guild_dog_states[message.guild.id][message.channel.id] = {"current_dog": None, "dog_message": None}
             
 
-    elif message.content.lower() == "I forfeit all mortal possessions to dog":
+    elif message.content.lower() == "i forfeit all mortal possessions to dog":
         embed = discord.Embed(
             color=discord.Color(0x265526),
             title="yeah!",
@@ -869,7 +869,7 @@ async def leaderboard_command(interaction: discord.Interaction):
         embed.set_footer(text=data["footer"])
         
         if top_users:
-            for index, (user_id, total_amount) in enumerate(top_users):
+            for index, (user_id, total_amount) in enumerate(top_users[:25]):
                 embed.add_field(
                     name=f"{index+1}.",
                     value=f"{total_amount:,} dogs: <@{user_id}>",
@@ -896,8 +896,6 @@ async def leaderboard_command(interaction: discord.Interaction):
 
         top_users = [(user_id, amount) for user_id, amount in all_top_users.items() if amount >= 20]
         top_users.sort(key=lambda x: x[1], reverse=True)
-
-        print(top_users)
 
         return rarest_dog, top_users
 
